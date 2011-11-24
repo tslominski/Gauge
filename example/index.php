@@ -37,16 +37,17 @@ $oGauge
 	->execute('boilerplate', '', 'tests/callbacks/global_boilerplate.php', 0)
 	->execute('direct_call', 'tests/callbacks/direct_call.php', 'tests/callbacks/boilerplate.php')
 	->execute('call_user_func', 'tests/callbacks/call_user_func.php', 'tests/callbacks/boilerplate.php')
-	->execute('invoke', 'tests/callbacks/invoke.php', 'tests/callbacks/boilerplate.php');
+	->execute('invoke', 'tests/callbacks/invoke.php', 'tests/callbacks/boilerplate.php')
+	->execute('invoke', 'tests/callbacks/invoke.php', 'tests/callbacks/boilerplate.php')
+	->execute('invoke', 'tests/callbacks/invoke.php', 'tests/callbacks/boilerplate.php')
+	->execute('invoke', 'tests/callbacks/invoke.php', 'tests/callbacks/boilerplate.php')
 
-	$oGauge
-		->addWriter(new HtmlWriter(null, '<!DOCTYPE html><html><head><meta charset="utf-8" /><title>My Gauge</title></head><body>'));
+	->addWriter(new HtmlWriter(null, '<!DOCTYPE html><html><head><meta charset="utf-8" /><title>My Gauge</title></head><body>'));
 
 	foreach($oGauge->getTestsIds() as $sTestId){
 	
 		$oGauge->writeSummary($sTestId);
 	
-	}
-
+	} // foreach
 
 } // namespace

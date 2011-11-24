@@ -37,7 +37,7 @@ namespace Gauge\Writers{
 		 * Print template
 		 * @var string
 		 */
-		protected $sTemplate = '<p>%1$s<br />PHP %4$s @ %5$s<br />%2$d iterations, %3$.4f seconds</p>';
+		protected $sTemplate = '<p>%1$s<br />PHP %5$s @ %6$s<br />%2$d iterations (in %4$d runs), %3$.4f seconds</p>';
 		
 		protected $sHeader = '<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Gauge</title></head><body>';
 		
@@ -88,10 +88,6 @@ namespace Gauge\Writers{
 		 * @see Gauge\Interfaces.WriterInterface::write()
 		 */
 		public function write($sTestId, $aTestData, $sPHP, $sSystem){
-			
-			$nIterations = $aTestData[Gauge::KEY_ITERATIONS];
-			
-			$fTime = $aTestData[Gauge::KEY_TIME];
 
 			if (!$this->bHeaderWritten){
 			
@@ -99,7 +95,7 @@ namespace Gauge\Writers{
 			
 			} // if
 			
-			printf($this->sTemplate, $sTestId, $nIterations, $fTime, $sPHP, $sSystem);
+			printf($this->sTemplate, $sTestId, $aTestData[Gauge::KEY_ITERATIONS], $aTestData[Gauge::KEY_TIME], $aTestData[Gauge::KEY_EXECUTIONS], $sPHP, $sSystem);
 			
 		} // write
 		
