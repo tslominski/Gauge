@@ -20,12 +20,11 @@ namespace Gauge\Interfaces {
 		/**
 		 * Writes test data
 		 * @param string $sTestId Id of test
-		 * @param integer $nIterations Number of iterations
-		 * @param float $fTime Time (in seconds)
+		 * @param array $aTestData Test data
 		 * @param string $sPHP PHP version
 		 * @param string $sSystem System identification
 		 */
-		public function write($sTestId, $nIterations, $fTime, $sPHP, $sSystem);
+		public function write($sTestId, $aTestData, $sPHP, $sSystem);
 		
 	} // interface
 	

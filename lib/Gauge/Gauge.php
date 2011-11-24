@@ -25,6 +25,10 @@ namespace Gauge {
 		const KEY_START 		= 'start';
 		const KEY_STOP  		= 'stop';
 		const KEY_ITERATIONS  	= 'iterations';
+		const KEY_TIME			= 'total_time';
+		const KEY_EXECUTIONS	= 'executions';
+		const KEY_TEST_CODE		= 'test_code';
+		const KEY_CODE			= 'code';
 		
 		# options names
 		
@@ -53,10 +57,16 @@ namespace Gauge {
 		protected $aConfig  = array();
 		
 		/**
-		 * Test data
+		 * Test runs data
 		 * @var array
 		 */
 		protected $aTests = array();
+		
+		/**
+		 * Tests data
+		 * @var array
+		 */
+		protected $aTestsDefinitions = array();
 		
 		/**
 		 * Current test
@@ -148,11 +158,16 @@ namespace Gauge {
 			
 			$this->sCurrentTestId = (string)$sTestId;
 			
-			$this->aTests[$this->sCurrentTestId] = array(self::KEY_START => 0, self::KEY_STOP => 0, self::KEY_ITERATIONS => 0);
+			// $this->aTests[$this->sCurrentTestId][] = array(self::KEY_START => 0, self::KEY_STOP => 0, self::KEY_ITERATIONS => 0);
 				
 			$nIterations = (!is_int($nIterations) ? (int)$this->aConfig[self::OPT_ITERATIONS] : $nIterations);
 
 			$sTestCode = $this->generateTestCode($this->sCurrentTestId, $this->prepareCode($sTestCode), $this->prepareCode($sBoilerPlateCode), $nIterations);		
+			
+			$this->aTestsDefinitions[$this->sCurrentTestId] = array(
+				self::KEY_ITERATIONS => $nIterations,
+				self::KEY_CODE		 => $sTestCode
+			);
 			
 			$sTestFile = $this->createTestFile($sTestCode);
 			
@@ -165,14 +180,37 @@ namespace Gauge {
 		} // execute
 		
 		/**
+		 * Return list of executed tests id
+		 * @return array List of test ids
+		 */
+		public function getTestsIds(){
+			
+			return array_keys($this->aTests);
+			
+		} // getTestsIds
+		
+		/**
 		* Starts timer. If timer id not specified, starts current timer
 		* @param string $sTestId
 		* @return Gauge\Gauge Self
 		*/
 		protected function start($sTestId){
-		
-			$this->aTests[$sTestId === null ? $this->sCurrentTestId : (string)$sTestId][self::KEY_START] = microtime(true);
 			
+			$sTestId = $sTestId === null ? $this->sCurrentTestId : (string)$sTestId;
+		
+			if (!array_key_exists($sTestId, $this->aTests)){
+				
+				$this->aTests[$sTestId] = array();
+				
+			} // if
+						
+			$this->aTests[$sTestId][] = array(
+				self::KEY_START 		=> microtime(true),
+				self::KEY_STOP			=> 0,
+				self::KEY_ITERATIONS	=> $this->aTestsDefinitions[$sTestId][self::KEY_ITERATIONS],
+				self::KEY_CODE			=> $this->aTestsDefinitions[$sTestId][self::KEY_CODE]
+			);
+				
 			return $this;
 			
 		} // start
@@ -184,35 +222,104 @@ namespace Gauge {
 		 */
 		protected function stop($sTestId = null){
 			
-			$this->aTests[$sTestId === null ? $this->sCurrentTestId : (string)$sTestId][self::KEY_STOP] = microtime(true);
+			$sTestId = ($sTestId === null ? $this->sCurrentTestId : (string)$sTestId);
+						
+			$this->aTests[$sTestId][$this->getLastTestIndex($sTestId)][self::KEY_STOP] = microtime(true);				
 				
 			return $this;
 		
 		} // stop
 		
 		/**
-		 * Writes test result
+		 * Writes test result for last test with given id
 		 * @param string $sTestId
 		 * @return Gauge\Gauge Self
 		 */
 		protected function write($sTestId){
 			
-			if (isset($this->aTests[$sTestId])){
+			$sTestId = $sTestId === null ? $this->sCurrentTestId : (string)$sTestId;
+							
+			if (isset($this->aTests[$sTestId]) && count($this->aTests[$sTestId]) > 0){				
+															
+				$aTestData = $this->aTests[$sTestId][$this->getLastTestIndex($sTestId)];
 				
+				$aTestData[self::KEY_EXECUTIONS] = 1;
+				
+				$aTestData[self::KEY_TIME] = $aTestData[self::KEY_STOP] - $aTestData[self::KEY_START]; 
+												
 				/**
-				* @var Gauge\Interfaces\WriterInterface
-				*/
+				 * @var Gauge\Interfaces\WriterInterface
+				 */
 				foreach ($this->aWriters as $oWriter){
 					
-					$oWriter->write($sTestId, $this->aTests[$sTestId][self::KEY_ITERATIONS], $this->aTests[$sTestId][self::KEY_STOP] - $this->aTests[$sTestId][self::KEY_START], PHP_VERSION, $this->sSystem);
+					$oWriter->write($sTestId, $aTestData + $this->aTestsDefinitions[$sTestId], PHP_VERSION, $this->sSystem);
 					
 				} // foreach
 		
-			} // if
-				
+			}
+			
 			return $this;
 				
 		} // write
+
+		/**
+		* Writes summaric result for all tests with the same id
+		* @param string $sTestId
+		* @return Gauge\Gauge Self
+		*/
+		public function writeSummary($sTestId){
+				
+			$sTestId = ($sTestId === null ? $this->sCurrentTestId : (string)$sTestId);
+
+			if (isset($this->aTests[$sTestId])){
+					
+				$aTestSummary = $this->getTestSummary($sTestId);
+							
+				/**
+				 * @var Gauge\Interfaces\WriterInterface
+				 */
+				foreach ($this->aWriters as $oWriter){
+			
+					$oWriter->write($sTestId, $aTestSummary, PHP_VERSION, $this->sSystem);
+			
+				} // foreach
+			
+			} // if
+		
+			return $this;
+		
+		} // write		
+		
+		/**
+		 * Returns test summary (# of executions, # of iterations, time)
+		 * @param string $sTestId Id of test
+		 * @return array Test summary
+		 */
+		protected function getTestSummary($sTestId){
+			
+			$aResult = array(
+				self::KEY_EXECUTIONS => 0,
+				self::KEY_ITERATIONS => 0,
+				self::KEY_TIME => 0
+			);			
+			
+			if (isset($this->aTests[$sTestId])){
+								 
+				$aResult[self::KEY_EXECUTIONS] = count($this->aTests[$sTestId]);
+				
+				foreach ($this->aTests[$sTestId] as $aTestRun){
+					
+					$aResult[self::KEY_ITERATIONS] += $aTestRun[self::KEY_ITERATIONS];
+					
+					$aResult[self::KEY_TIME] += ($aTestRun[self::KEY_STOP] - $aTestRun[self::KEY_START]);
+					
+				} // foreach
+				
+			} // if
+			
+			return $aResult;
+		
+		} // 
 		
 		/**
 		 * Creates temporary file with given code inside
@@ -281,11 +388,20 @@ namespace Gauge {
 		
 			$sTemplate = file_get_contents($this->aConfig[self::OPT_TEMPLATE_FILE]);
 			
-			$this->aTests[$sTestId][self::KEY_ITERATIONS] = (int)$nIterations;
-						
 			return sprintf($sTemplate, (string)$sTestId, (string)$sTestCode, (string)$sBoilerplateCode,  (int)$nIterations );		
 					
 		} // generateTestCode
+		
+		/**
+		 * Get numeric index of last test with given id
+		 * @param string $sTestId Test id
+		 * @return integer Index of last id (or 0 if no test, but it should never happen)
+		 */
+		protected function getLastTestIndex($sTestId){
+			
+			return isset($this->aTests[$sTestId]) ? count($this->aTests[$sTestId]) - 1 : 0;
+			
+		} // getLastTestIndex
 		
 	} // class
 	

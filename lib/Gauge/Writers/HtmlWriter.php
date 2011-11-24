@@ -7,6 +7,8 @@
 
 namespace Gauge\Writers{
 
+	use Gauge\Gauge;
+
 	use Gauge\Interfaces\WriterInterface;
 	
 	/**
@@ -85,7 +87,11 @@ namespace Gauge\Writers{
 		 * (non-PHPdoc)
 		 * @see Gauge\Interfaces.WriterInterface::write()
 		 */
-		public function write($sTestId, $nIterations, $fTime, $sPHP, $sSystem){
+		public function write($sTestId, $aTestData, $sPHP, $sSystem){
+			
+			$nIterations = $aTestData[Gauge::KEY_ITERATIONS];
+			
+			$fTime = $aTestData[Gauge::KEY_TIME];
 
 			if (!$this->bHeaderWritten){
 			
