@@ -16,7 +16,6 @@ require_once implode(DIRECTORY_SEPARATOR, array(__DIR__, '..', 'lib', 'Gauge', '
 require_once implode(DIRECTORY_SEPARATOR, array(__DIR__, '..', 'lib', 'Gauge', 'Writers', 'SqlWriter.php'));
 require_once implode(DIRECTORY_SEPARATOR, array(__DIR__, '..', 'lib', 'Gauge', 'Gauge.php'));
 
-
 $oGauge = new Gauge;
 
 $oGauge
